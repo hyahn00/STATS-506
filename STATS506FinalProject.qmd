@@ -1,0 +1,69 @@
+---
+title: "STATS 506 Final Project"
+format: html
+editor: visual
+---
+
+## 1. Generating Data 
+
+```{r}
+# Setting function for genertaing data for different distribution types
+# Simluating different data for different distribution, sample size, and repedition size for monte carlo
+simulate_data = function(dist, n, reps) {
+  if (dist == "norm") {
+    replicate(reps, rnorm(n))
+  } else if (dist == "exp") {
+    replicate(reps,rexp(n, rate = 1/5))
+  } else if (dist == "mix") {
+    replicate(reps, c(rnorm(n/2, mean = -2, sd = 1), rnorm(n/2, mean = 3, sd = 2)))
+  }
+}
+```
+
+## 2. Performing One-Sample T-Test
+
+```{r}
+# Function for Performing t-test and calculating Type I error
+run_t_tests = function(data, true_mean = 0, alpha = 0.05) {
+    results = apply(data, 2, function(sample) {
+      # performing t-test to each iteration
+      t_test = t.test(sample, mu = true_mean)
+      p_value = t_test$p.value
+      # recording false negative
+      p_value < alpha
+    })
+    # calculating Type I error rate 
+    mean(results)
+  }
+```
+
+## 3.  Performing Simulation
+
+```{r}
+set.seed(1) 
+# intializeing sample sizes and number of iteration
+sample_sizes = c(5, 7, 10, 20, 30, 50, 100, 500, 1000)
+reps = 1000
+results = list()
+
+# looping through different sample size
+for (size in sample_sizes) {
+  # simluating data for three different distributions
+  normal = simulate_data("norm", size, reps)
+  exponential = simulate_data("exp", size, reps)
+  mixture = simulate_data("mix", size, reps)
+  # Making data frame for each sample size
+  results[[as.character(size)]] = data.frame(
+    SampleSize = size,
+    Distribution = c("Normal", "Exponential", "Mixture"),
+    Type1ErrorRate = c(
+      run_t_tests(normal),
+      run_t_tests(exponential, true_mean = 5),
+      run_t_tests(mixture, true_mean= 0.5)
+    )
+  )
+}
+# combining list and printing result
+result = do.call(rbind, results)
+print(result)
+```
